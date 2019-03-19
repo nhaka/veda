@@ -156,4 +156,8 @@ export default class Wrapper {
         }
         return projectPaths[0];
     }
+
+    lint(editor: any): any {
+        return this.app.lint(editor);
+    }
 }

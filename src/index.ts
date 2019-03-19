@@ -101,4 +101,19 @@ module.exports = {
     deactivate() {
         wrapper && wrapper.destroy();
     },
+
+    provideLinter() {
+        return {
+            name: 'VEDA',
+            scope: 'file',
+            lintsOnChange: true,
+            grammarScopes: ['source.glsl'],
+            lint(editor: any) {
+                if (!wrapper) {
+                    return [];
+                }
+                return wrapper.lint(editor);
+            },
+        };
+    },
 };

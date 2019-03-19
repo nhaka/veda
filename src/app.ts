@@ -1,7 +1,7 @@
 import { TextEditor } from 'atom';
 import * as path from 'path';
 import View from './view';
-import { validator, loadFile } from './validator';
+import { validator, loadFile, getGlslErrors } from './validator';
 import { IShader, ISoundShader, IOscData } from './constants';
 import Config, { IRc, IRcDiff } from './config';
 import { IPlayable } from './playable';
@@ -375,5 +375,38 @@ export default class App {
 
     setRecordingMode(mode: RecordingMode): void {
         this.recorder.setRecordingMode(mode);
+    }
+
+    lint(editor: TextEditor): Promise<any[]> {
+        const filepath = editor.getPath()!;
+        let shader = editor.getText();
+
+        let glslifyOffset = 0;
+        const rc = this.config.createRc();
+        if (rc.glslify) {
+            const newShader = glslify(shader, {
+                basedir: path.dirname(filepath),
+                transform: [glslifyImport],
+            });
+            glslifyOffset =
+                newShader.split(/\r\n|\r|\n/).length -
+                shader.split(/\r\n|\r|\n/).length;
+            shader = newShader;
+        }
+
+        const m = (filepath || '').match(/(\.(?:glsl|frag|vert|fs|vs))$/);
+        if (!m) {
+            console.error("The filename for current doesn't seems to be GLSL.");
+            return Promise.resolve([]);
+        }
+        const suffix = m[1];
+
+        return getGlslErrors(
+            this.glslangValidatorPath,
+            filepath,
+            shader,
+            suffix,
+            glslifyOffset,
+        );
     }
 }
