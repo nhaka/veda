@@ -11,8 +11,9 @@ import { INITIAL_SHADER, INITIAL_SOUND_SHADER } from './constants';
 import OscLoader from './osc-loader';
 import Recorder, { RecordingMode } from './recorder';
 
-const glslify = require('glslify');
-const glslifyImport = require('glslify-import');
+// const glslify = require('glslify');
+// const glslifyImport = require('glslify-import');
+import glslify from './glslify';
 
 interface IAppState {
     isPlaying: boolean;
@@ -317,12 +318,9 @@ export default class App {
                 this.onAnyChanges(diff);
                 return this.player.onChange(diff);
             })
-            .then(() => {
+            .then(async () => {
                 if (rc.glslify) {
-                    shader = glslify(shader, {
-                        basedir: path.dirname(filepath),
-                        transform: [glslifyImport],
-                    });
+                    shader = (await glslify(shader, path.dirname(filepath)))[0];
                 }
             })
             .then(() => {
@@ -377,27 +375,26 @@ export default class App {
         this.recorder.setRecordingMode(mode);
     }
 
-    lint(editor: TextEditor): Promise<any[]> {
+    async lint(editor: TextEditor): Promise<any[]> {
         const filepath = editor.getPath()!;
         let shader = editor.getText();
 
         let glslifyOffset = 0;
         const rc = this.config.createRc();
         if (rc.glslify) {
-            const newShader = glslify(shader, {
-                basedir: path.dirname(filepath),
-                transform: [glslifyImport],
-            });
-            glslifyOffset =
-                newShader.split(/\r\n|\r|\n/).length -
-                shader.split(/\r\n|\r|\n/).length;
+            const [newShader, offset] = await glslify(
+                shader,
+                path.dirname(filepath),
+            );
+
             shader = newShader;
+            glslifyOffset = offset;
         }
 
         const m = (filepath || '').match(/(\.(?:glsl|frag|vert|fs|vs))$/);
         if (!m) {
             console.error("The filename for current doesn't seems to be GLSL.");
-            return Promise.resolve([]);
+            return [];
         }
         const suffix = m[1];
 

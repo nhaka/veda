@@ -60,30 +60,22 @@ export async function getGlslErrors(
             .catch(e => e.stdout);
 
         const errors: ILintError[] = [];
-        result.split(/[\n\r]/).forEach((line: string) => {
-            const match = new RegExp(compileRegex).exec(line);
+        result.split(/[\n\r]/).forEach((resultLine: string) => {
+            const match = new RegExp(compileRegex).exec(resultLine);
             if (match) {
-                const lineStart = parseInt(match[3], 10);
-                const colStart = parseInt(match[2], 10);
-                const lineEnd = lineStart;
-                const colEnd = colStart;
+                let line = parseInt(match[3], 10);
+                let col = parseInt(match[2], 10);
+                line -= glslifyOffset;
+
+                line = line > 0 ? line - 1 : 0;
+                col = col > 0 ? col - 1 : 0;
 
                 errors.push({
                     severity: getSeverity(match[1]),
                     excerpt: match[4].trim(),
                     location: {
                         file: filepath,
-                        position: [
-                            [
-                                (lineStart > 0 ? lineStart - 1 : 0) -
-                                    glslifyOffset,
-                                colStart > 0 ? colStart - 1 : 0,
-                            ],
-                            [
-                                (lineEnd > 0 ? lineEnd - 1 : 0) - glslifyOffset,
-                                colEnd > 0 ? colEnd - 1 : 0,
-                            ],
-                        ],
+                        position: [[line, col], [line, col]],
                     },
                 });
             }
